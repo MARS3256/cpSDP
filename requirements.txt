@@ -1,0 +1,10 @@
+PyQt6
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+joblib
+pycparser
+javalang
+pygments
