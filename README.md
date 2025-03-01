@@ -1,7 +1,7 @@
 # cpSDP
 
 ## Overview
-cpSDP is a research project focused on the development and analysis of Semidefinite Programming (SDP) techniques. This project aims to explore new methodologies and applications of SDP in various fields.
+cpSDP is a research project focused on the development and analysis of Software Defect Prediction (SDP) techniques. This project aims to explore new methodologies and applications of SDP in various fields.
 
 ## Features
 - Implementation of SDP algorithms
