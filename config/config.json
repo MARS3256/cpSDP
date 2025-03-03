@@ -1,0 +1,17 @@
+{
+    "default_language": "Python",
+    "recent_projects": [],
+    "recent_models": [],
+    "ui": {
+      "dark_mode": false,
+      "font_size": 10
+    },
+    "extraction": {
+      "excluded_directories": [".git", ".svn", "venv", "__pycache__", "node_modules", ".idea", ".vscode", "build", "dist"]
+    },
+    "model": {
+      "default_estimators": 100,
+      "default_max_depth": null,
+      "default_test_split": 0.2
+    }
+  }

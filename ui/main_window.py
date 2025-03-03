@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QTabWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QSettings, QSize, QPoint
 from PyQt6.QtGui import QIcon, QAction
 
-from ui.project_tab import ProjectTab
+from ui.project_tab import ProjectTab, ExtractionWorker
 from ui.metrics_tab import MetricsTab
 from ui.prediction_tab import PredictionTab
 
@@ -124,8 +124,44 @@ class MainWindow(QMainWindow):
         self.metrics_tab.save_metrics()
     
     def extract_metrics(self):
-        """Extract metrics from the current project."""
-        self.project_tab.extract_metrics()
+        """Extract metrics from the selected project."""
+        if not self.project_path:
+            QMessageBox.warning(self, "Warning", "Please select a project directory first.")
+            return
+        
+        output_path = self.output_path.text()
+        if not output_path:
+            output_path, _ = QFileDialog.getSaveFileName(
+                self, "Save Metrics CSV", "", "CSV Files (*.csv)"
+            )
+            if not output_path:
+                return
+            
+            if not output_path.endswith('.csv'):
+                output_path += '.csv'
+            self.output_path.setText(output_path)
+        
+        # Get the selected directories
+        if self.structure_group.isChecked():
+            selected_dirs = self.get_selected_directories()
+        else:
+            # Default behavior - use the whole project
+            selected_dirs = None
+        
+        # Get the selected language
+        language = self.language_combo.currentText()
+        
+        # Disable UI elements during extraction
+        self.extract_button.setEnabled(False)
+        self.status_label.setText("Extracting metrics...")
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setRange(0, 0)  # Indeterminate progress
+        
+        # Create worker thread
+        self.worker = ExtractionWorker(language, self.project_path, output_path, selected_dirs)
+        self.worker.finished.connect(self.on_extraction_finished)
+        self.worker.error.connect(self.on_extraction_error)
+        self.worker.start()
     
     def train_model(self):
         """Train a model on the current metrics data."""

@@ -5,7 +5,8 @@ import sys
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                            QLineEdit, QPushButton, QComboBox, QFileDialog,
                            QGroupBox, QFormLayout, QTextEdit, QMessageBox,
-                           QProgressBar)
+                           QProgressBar, QTreeWidget, QTreeWidgetItem, QCheckBox, 
+                           QHeaderView, QFrame)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont
 
@@ -17,18 +18,23 @@ class ExtractionWorker(QThread):
     finished = pyqtSignal(str)
     error = pyqtSignal(str)
     
-    def __init__(self, language, project_path, output_path):
+    def __init__(self, language, project_path, output_path, selected_dirs=None):
         """Initialize the extraction worker."""
         super().__init__()
         self.language = language
         self.project_path = project_path
         self.output_path = output_path
+        self.selected_dirs = selected_dirs
     
     def run(self):
         """Extract metrics from the project."""
         try:
             # Get appropriate extractor
             extractor = get_language_extractor(self.language, self.project_path)
+            
+            # Set selected directories if provided
+            if self.selected_dirs:
+                extractor.set_selected_directories(self.selected_dirs)
             
             # Extract metrics and save to CSV
             csv_path = extractor.save_metrics_to_csv(self.output_path)
@@ -110,18 +116,6 @@ class ProjectTab(QWidget):
         
         parent_layout.addWidget(group_box)
     
-    def create_project_info_group(self, parent_layout):
-        """Create the project information group."""
-        group_box = QGroupBox("Project Information")
-        layout = QVBoxLayout(group_box)
-        
-        # Project info display
-        self.info_text = QTextEdit()
-        self.info_text.setReadOnly(True)
-        
-        layout.addWidget(self.info_text)
-        
-        parent_layout.addWidget(group_box)
     
     def create_extraction_group(self, parent_layout):
         """Create the metrics extraction group."""
@@ -195,6 +189,11 @@ class ProjectTab(QWidget):
         # Update project info
         self.update_project_info()
         
+        # Enable the structure group and populate if it's checked
+        self.structure_group.setEnabled(True)
+        if self.structure_group.isChecked():
+            self.populate_project_tree(path)
+        
         # Notify the parent window
         if self.parent and hasattr(self.parent, 'status_bar'):
             self.parent.status_bar.showMessage(f"Project loaded: {path}")
@@ -209,7 +208,139 @@ class ProjectTab(QWidget):
             if not file_path.endswith('.csv'):
                 file_path += '.csv'
             self.output_path.setText(file_path)
+            
     
+    def create_project_info_group(self, parent_layout):
+        """Create the project information group."""
+        group_box = QGroupBox("Project Information")
+        layout = QVBoxLayout(group_box)
+        
+        # Project info display
+        self.info_text = QTextEdit()
+        self.info_text.setReadOnly(True)
+        
+        # Add project structure tree with checkboxes in a collapsible section
+        self.structure_group = QGroupBox("Project Structure Selection")
+        self.structure_group.setCheckable(True)
+        self.structure_group.setChecked(False)
+        self.structure_group.toggled.connect(self.toggle_structure_section)
+        
+        structure_layout = QVBoxLayout(self.structure_group)
+        
+        # Create tree widget
+        self.tree_widget = QTreeWidget()
+        self.tree_widget.setHeaderLabels(["Directory"])
+        self.tree_widget.header().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.tree_widget.setColumnCount(1)
+        self.tree_widget.setAlternatingRowColors(True)
+        self.tree_widget.setMaximumHeight(200)
+        
+        # Add buttons for easy selection
+        selection_layout = QHBoxLayout()
+        select_all_btn = QPushButton("Select All")
+        deselect_all_btn = QPushButton("Deselect All")
+        refresh_btn = QPushButton("Refresh Tree")
+        
+        select_all_btn.clicked.connect(self.select_all_dirs)
+        deselect_all_btn.clicked.connect(self.deselect_all_dirs)
+        refresh_btn.clicked.connect(lambda: self.populate_project_tree(self.project_path))
+        
+        selection_layout.addWidget(select_all_btn)
+        selection_layout.addWidget(deselect_all_btn)
+        selection_layout.addWidget(refresh_btn)
+        
+        structure_layout.addLayout(selection_layout)
+        structure_layout.addWidget(self.tree_widget)
+        
+        # Add all widgets to the main layout
+        layout.addWidget(self.info_text)
+        layout.addWidget(self.structure_group)
+
+        # Make the structure group visible but initially unchecked
+        self.structure_group.setVisible(True)
+        self.structure_group.setChecked(False)
+        
+        parent_layout.addWidget(group_box)
+
+    def toggle_structure_section(self, checked):
+        """Toggle visibility of the tree and buttons within the structure section."""
+        if checked and self.project_path:
+            self.populate_project_tree(self.project_path)
+            self.tree_widget.setVisible(True)
+        else:
+            self.tree_widget.setVisible(False)
+
+    def populate_project_tree(self, root_path):
+        """Populate the tree with project structure."""
+        self.tree_widget.clear()
+        
+        # Excluded common directories that are typically not part of source code
+        self.excluded_dirs = ['.git', '.svn', 'venv', '.env', '__pycache__', 
+                            'node_modules', 'build', 'dist', '.idea', '.vscode']
+        
+        if not root_path or not os.path.isdir(root_path):
+            return
+        
+        # Create root item
+        root_item = QTreeWidgetItem(self.tree_widget, [os.path.basename(root_path)])
+        root_item.setCheckState(0, Qt.CheckState.Checked)
+        root_item.setExpanded(True)
+        root_item.setData(0, Qt.ItemDataRole.UserRole, root_path)
+        
+        # Add directories to the tree
+        self._add_directory(root_path, root_item)
+        
+        # Show the tree
+        self.tree_widget.expandItem(root_item)
+
+    def _add_directory(self, path, parent_item):
+        """Recursively add directories to the tree."""
+        try:
+            for item in sorted(os.listdir(path)):
+                full_path = os.path.join(path, item)
+                if os.path.isdir(full_path):
+                    # Skip common excluded directories by default
+                    if item in self.excluded_dirs:
+                        continue
+                        
+                    dir_item = QTreeWidgetItem(parent_item, [item])
+                    dir_item.setCheckState(0, Qt.CheckState.Checked)
+                    dir_item.setData(0, Qt.ItemDataRole.UserRole, full_path)
+                    self._add_directory(full_path, dir_item)
+        except (PermissionError, OSError) as e:
+            self.logger.warning(f"Could not access directory {path}: {str(e)}")
+
+    def select_all_dirs(self):
+        """Select all directories in the tree."""
+        self._set_check_state_recursive(self.tree_widget.invisibleRootItem(), Qt.CheckState.Checked)
+
+    def deselect_all_dirs(self):
+        """Deselect all directories in the tree."""
+        self._set_check_state_recursive(self.tree_widget.invisibleRootItem(), Qt.CheckState.Unchecked)
+
+    def _set_check_state_recursive(self, item, state):
+        """Recursively set the check state of all items."""
+        for i in range(item.childCount()):
+            child = item.child(i)
+            child.setCheckState(0, state)
+            self._set_check_state_recursive(child, state)
+
+    def get_selected_directories(self):
+        """Get a list of selected directory paths."""
+        selected_dirs = []
+        self._get_checked_dirs_recursive(self.tree_widget.invisibleRootItem(), selected_dirs)
+        return selected_dirs
+
+    def _get_checked_dirs_recursive(self, item, selected_dirs):
+        """Recursively collect checked directories."""
+        for i in range(item.childCount()):
+            child = item.child(i)
+            if child.checkState(0) == Qt.CheckState.Checked:
+                path = child.data(0, Qt.ItemDataRole.UserRole)
+                if path:
+                    selected_dirs.append(path)
+            self._get_checked_dirs_recursive(child, selected_dirs)
+        
     def update_project_info(self):
         """Update the project information display."""
         if not self.project_path:
@@ -225,17 +356,34 @@ class ProjectTab(QWidget):
         other_count = 0
         total_files = 0
         
-        for root, _, files in os.walk(self.project_path):
-            for file in files:
-                total_files += 1
-                if file.endswith(('.c', '.cpp', '.h', '.hpp')):
-                    c_cpp_count += 1
-                elif file.endswith('.java'):
-                    java_count += 1
-                elif file.endswith('.py'):
-                    python_count += 1
-                else:
-                    other_count += 1
+        # Only populate the tree if it's visible
+        if self.structure_group.isChecked():
+            selected_dirs = self.get_selected_directories()
+            dirs_to_scan = selected_dirs if selected_dirs else [self.project_path]
+        else:
+            # Use the whole project path if structure selection isn't used
+            dirs_to_scan = [self.project_path]
+            
+            # Common directories to exclude
+            excluded_dirs = ['.git', '.svn', 'venv', '.env', '__pycache__', 
+                            'node_modules', 'build', 'dist', '.idea', '.vscode']
+        
+        for dir_path in dirs_to_scan:
+            for root, dirs, files in os.walk(dir_path):
+                # Skip excluded directories if not using structure selection
+                if not self.structure_group.isChecked():
+                    dirs[:] = [d for d in dirs if d not in excluded_dirs]
+                    
+                for file in files:
+                    total_files += 1
+                    if file.endswith(('.c', '.cpp', '.h', '.hpp')):
+                        c_cpp_count += 1
+                    elif file.endswith('.java'):
+                        java_count += 1
+                    elif file.endswith('.py'):
+                        python_count += 1
+                    else:
+                        other_count += 1
         
         info_text += "<h4>File Statistics:</h4>\n"
         info_text += f"<p>Total files: {total_files}</p>\n"
