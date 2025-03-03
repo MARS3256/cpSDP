@@ -252,16 +252,95 @@ class ProjectTab(QWidget):
         structure_layout.addLayout(selection_layout)
         structure_layout.addWidget(self.tree_widget)
         
+        # Add "Update Statistics" button
+        update_stats_btn = QPushButton("Update Statistics")
+        update_stats_btn.clicked.connect(self.update_statistics_with_selection)
+        structure_layout.addWidget(update_stats_btn)
+        
         # Add all widgets to the main layout
         layout.addWidget(self.info_text)
         layout.addWidget(self.structure_group)
-
+        
         # Make the structure group visible but initially unchecked
         self.structure_group.setVisible(True)
         self.structure_group.setChecked(False)
         
         parent_layout.addWidget(group_box)
-
+    
+    def update_statistics_with_selection(self):
+        """Update the file statistics based on selected directories."""
+        if not self.project_path:
+            return
+        
+        info_text = f"<h3>Project: {os.path.basename(self.project_path)}</h3>\n"
+        info_text += f"<p><b>Location:</b> {self.project_path}</p>\n"
+        
+        # Count files by language
+        c_cpp_count = 0
+        java_count = 0
+        python_count = 0
+        other_count = 0
+        total_files = 0
+        
+        # Get selected directories or use project path
+        if self.structure_group.isChecked():
+            selected_dirs = self.get_selected_directories()
+            if not selected_dirs:  # If no directories are selected
+                info_text += "<p><b>No directories selected.</b> Please select at least one directory.</p>\n"
+                self.info_text.setHtml(info_text)
+                return
+            
+            dirs_to_scan = selected_dirs
+            info_text += "<p><b>Selected Directories:</b></p>\n<ul>\n"
+            for dir_path in selected_dirs:
+                info_text += f"<li>{os.path.relpath(dir_path, self.project_path)}</li>\n"
+            info_text += "</ul>\n"
+        else:
+            # Default to entire project if structure selection not used
+            dirs_to_scan = [self.project_path]
+            # Common directories to exclude
+            excluded_dirs = ['.git', '.svn', 'venv', '.env', '__pycache__', 
+                            'node_modules', 'build', 'dist', '.idea', '.vscode']
+        
+        # Scan selected directories
+        for dir_path in dirs_to_scan:
+            for root, dirs, files in os.walk(dir_path):
+                # Skip excluded directories if not using structure selection
+                if not self.structure_group.isChecked():
+                    dirs[:] = [d for d in dirs if d not in excluded_dirs]
+                    
+                for file in files:
+                    total_files += 1
+                    if file.endswith(('.c', '.cpp', '.h', '.hpp')):
+                        c_cpp_count += 1
+                    elif file.endswith('.java'):
+                        java_count += 1
+                    elif file.endswith('.py'):
+                        python_count += 1
+                    else:
+                        other_count += 1
+        
+        info_text += "<h4>File Statistics:</h4>\n"
+        info_text += f"<p>Total files: {total_files}</p>\n"
+        info_text += f"<p>C/C++ files: {c_cpp_count}</p>\n"
+        info_text += f"<p>Java files: {java_count}</p>\n"
+        info_text += f"<p>Python files: {python_count}</p>\n"
+        info_text += f"<p>Other files: {other_count}</p>\n"
+        
+        # Auto-select language based on file counts
+        if c_cpp_count >= max(java_count, python_count):
+            self.language_combo.setCurrentText("C/C++")
+        elif java_count >= max(c_cpp_count, python_count):
+            self.language_combo.setCurrentText("Java")
+        elif python_count >= max(c_cpp_count, java_count):
+            self.language_combo.setCurrentText("Python")
+        
+        self.info_text.setHtml(info_text)
+        
+        # Update status
+        self.status_label.setText("Statistics updated based on selected directories")
+        
+    
     def toggle_structure_section(self, checked):
         """Toggle visibility of the tree and buttons within the structure section."""
         if checked and self.project_path:
@@ -343,37 +422,28 @@ class ProjectTab(QWidget):
         
     def update_project_info(self):
         """Update the project information display."""
-        if not self.project_path:
-            return
-        
-        info_text = f"<h3>Project: {os.path.basename(self.project_path)}</h3>\n"
-        info_text += f"<p><b>Location:</b> {self.project_path}</p>\n"
-        
-        # Count files by language
-        c_cpp_count = 0
-        java_count = 0
-        python_count = 0
-        other_count = 0
-        total_files = 0
-        
-        # Only populate the tree if it's visible
         if self.structure_group.isChecked():
-            selected_dirs = self.get_selected_directories()
-            dirs_to_scan = selected_dirs if selected_dirs else [self.project_path]
+            # Use selected directories for statistics if structure selection is active
+            self.update_statistics_with_selection()
         else:
-            # Use the whole project path if structure selection isn't used
-            dirs_to_scan = [self.project_path]
+            # Default behavior - scan the whole project with exclusions
+            info_text = f"<h3>Project: {os.path.basename(self.project_path)}</h3>\n"
+            info_text += f"<p><b>Location:</b> {self.project_path}</p>\n"
             
-            # Common directories to exclude
+            # Count files by language with common exclusions
             excluded_dirs = ['.git', '.svn', 'venv', '.env', '__pycache__', 
                             'node_modules', 'build', 'dist', '.idea', '.vscode']
-        
-        for dir_path in dirs_to_scan:
-            for root, dirs, files in os.walk(dir_path):
-                # Skip excluded directories if not using structure selection
-                if not self.structure_group.isChecked():
-                    dirs[:] = [d for d in dirs if d not in excluded_dirs]
-                    
+            
+            c_cpp_count = 0
+            java_count = 0
+            python_count = 0
+            other_count = 0
+            total_files = 0
+            
+            for root, dirs, files in os.walk(self.project_path):
+                # Skip excluded directories
+                dirs[:] = [d for d in dirs if d not in excluded_dirs]
+                
                 for file in files:
                     total_files += 1
                     if file.endswith(('.c', '.cpp', '.h', '.hpp')):
@@ -384,24 +454,23 @@ class ProjectTab(QWidget):
                         python_count += 1
                     else:
                         other_count += 1
-        
-        info_text += "<h4>File Statistics:</h4>\n"
-        info_text += f"<p>Total files: {total_files}</p>\n"
-        info_text += f"<p>C/C++ files: {c_cpp_count}</p>\n"
-        info_text += f"<p>Java files: {java_count}</p>\n"
-        info_text += f"<p>Python files: {python_count}</p>\n"
-        info_text += f"<p>Other files: {other_count}</p>\n"
-        
-        # Auto-select language based on file counts
-        if c_cpp_count >= max(java_count, python_count):
-            self.language_combo.setCurrentText("C/C++")
-        elif java_count >= max(c_cpp_count, python_count):
-            self.language_combo.setCurrentText("Java")
-        elif python_count >= max(c_cpp_count, java_count):
-            self.language_combo.setCurrentText("Python")
-        
-        self.info_text.setHtml(info_text)
-    
+            
+            info_text += "<h4>File Statistics:</h4>\n"
+            info_text += f"<p>Total files: {total_files}</p>\n"
+            info_text += f"<p>C/C++ files: {c_cpp_count}</p>\n"
+            info_text += f"<p>Java files: {java_count}</p>\n"
+            info_text += f"<p>Python files: {python_count}</p>\n"
+            info_text += f"<p>Other files: {other_count}</p>\n"
+            
+            # Auto-select language based on file counts
+            if c_cpp_count >= max(java_count, python_count):
+                self.language_combo.setCurrentText("C/C++")
+            elif java_count >= max(c_cpp_count, python_count):
+                self.language_combo.setCurrentText("Java")
+            elif python_count >= max(c_cpp_count, java_count):
+                self.language_combo.setCurrentText("Python")
+            
+            self.info_text.setHtml(info_text)
     def extract_metrics(self):
         """Extract metrics from the selected project."""
         if not self.project_path:
