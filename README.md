@@ -68,8 +68,14 @@ This project is licensed under the MIT License. See the LICENSE file for details
 Muhammad As Adur Rahman Sajid  
 ULAB, CSE Department  
 Student ID: 233014037  
+[Github](https://github.com/MARS3256/)
 
-@mars.vxi3 All rights reserved
+
+Suravi Akhter
+Faculty Member
+ULAB, CSE Department
+
+All rights reserved
 
 ## Contributing
 Contributions to improve cpSDP are welcome. Please feel free to submit pull requests or open issues to enhance the functionality.
