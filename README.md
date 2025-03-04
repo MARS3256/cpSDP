@@ -62,15 +62,17 @@ python main.py
 This project is licensed under the MIT License. See the LICENSE file for details.
 
 ## Author
+Suravi Akhter
+Faculty Member
+ULAB, CSE Department
+
 Muhammad As Adur Rahman Sajid  
 ULAB, CSE Department  
 Student ID: 233014037  
 [Github](https://github.com/MARS3256/)
 
 
-Suravi Akhter
-Faculty Member
-ULAB, CSE Department
+
 
 All rights reserved
 
