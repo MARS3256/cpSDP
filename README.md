@@ -1,6 +1,3 @@
-Collecting workspace information# Updated README.md
-
-```markdown
 # cpSDP - Software Defect Prediction Tool
 
 ## Overview
