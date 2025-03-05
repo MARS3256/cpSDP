@@ -24,7 +24,7 @@ cpSDP is a research project focused on the development and analysis of Software 
 
 ### Step 1: Clone the Repository
 ```sh
-git clone https://github.com/yourusername/cpSDP.git
+git clone https://github.com/mars3256/cpSDP.git
 cd cpSDP
 ```
 
