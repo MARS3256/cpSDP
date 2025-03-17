@@ -23,23 +23,6 @@ def create_folder_tree(folder_map, root_dir='.'):
             elif isinstance(subfolders, list):
                 create_folder_tree({subfolder: [] for subfolder in subfolders}, folder_path)
 
-# Example usage:
-# folder_map = {
-#     'Actions': ['action.py'],
-#     'AIAgents': {
-#         'AIData': ['memoryData.py', 'synData.py', 'contextRetriever.py', 'memorySaver.py', 'summarizer.py', 'synAI.py']
-#     },
-#     'ControlPanel': ['hub.py', 'promptInput.py'],
-#     'Data': ['userMemories.json'],
-#     'scratchpad': ['questions.txt', 'test.txt'],
-#     'tests': ['chat.py', 'newchat.py', 'ntts.py', 'test.py'],
-#     'Widgets': ['cardHolder.py', 'cards.py', 'VScrollView.py'],
-#     '.env': [],
-#     'synVoice.py': [],
-#     't.py': [],
-#     'twitchChat.py': [],
-#     'v.py': []
-# }
 
 folder_map = {
     'main.py': [],

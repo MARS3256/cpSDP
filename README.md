@@ -1,6 +1,3 @@
-Collecting workspace information# Updated README.md
-
-```markdown
 # cpSDP - Software Defect Prediction Tool
 
 ## Overview
@@ -27,7 +24,7 @@ cpSDP is a research project focused on the development and analysis of Software 
 
 ### Step 1: Clone the Repository
 ```sh
-git clone https://github.com/yourusername/cpSDP.git
+git clone https://github.com/mars3256/cpSDP.git
 cd cpSDP
 ```
 
@@ -65,15 +62,17 @@ python main.py
 This project is licensed under the MIT License. See the LICENSE file for details.
 
 ## Author
+Suravi Akhter ,
+Faculty Member ,
+ULAB, CSE Department
+
 Muhammad As Adur Rahman Sajid  
 ULAB, CSE Department  
 Student ID: 233014037  
 [Github](https://github.com/MARS3256/)
 
 
-Suravi Akhter
-Faculty Member
-ULAB, CSE Department
+
 
 All rights reserved
 
