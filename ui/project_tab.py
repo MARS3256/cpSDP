@@ -234,6 +234,7 @@ class ProjectTab(QWidget):
         self.tree_widget.setColumnCount(1)
         self.tree_widget.setAlternatingRowColors(True)
         self.tree_widget.setMaximumHeight(200)
+        self.tree_widget.itemChanged.connect(self.on_item_changed)
         
         # Add buttons for easy selection
         selection_layout = QHBoxLayout()
@@ -266,7 +267,26 @@ class ProjectTab(QWidget):
         self.structure_group.setChecked(False)
         
         parent_layout.addWidget(group_box)
-    
+        
+    def on_item_changed(self, item, column):
+        """Handle checkbox state changes and propagate to children."""
+        # Temporarily block signals to prevent recursion
+        self.tree_widget.blockSignals(True)
+        
+        # Get the current check state
+        check_state = item.checkState(0)
+        
+        # Apply the same state to all children
+        for i in range(item.childCount()):
+            child = item.child(i)
+            child.setCheckState(0, check_state)
+            
+            # Recursively apply to all descendants
+            self._set_check_state_recursive(child, check_state)
+        
+        # Re-enable signals
+        self.tree_widget.blockSignals(False)
+        
     def update_statistics_with_selection(self):
         """Update the file statistics based on selected directories."""
         if not self.project_path:
@@ -291,10 +311,6 @@ class ProjectTab(QWidget):
                 return
             
             dirs_to_scan = selected_dirs
-            info_text += "<p><b>Selected Directories:</b></p>\n<ul>\n"
-            for dir_path in selected_dirs:
-                info_text += f"<li>{os.path.relpath(dir_path, self.project_path)}</li>\n"
-            info_text += "</ul>\n"
         else:
             # Default to entire project if structure selection not used
             dirs_to_scan = [self.project_path]
@@ -327,6 +343,13 @@ class ProjectTab(QWidget):
         info_text += f"<p>Python files: {python_count}</p>\n"
         info_text += f"<p>Other files: {other_count}</p>\n"
         
+        # Add selected directories section at the bottom
+        if self.structure_group.isChecked():
+            info_text += "<h4>Selected Directories:</h4>\n<ul>\n"
+            for dir_path in selected_dirs:
+                info_text += f"<li>{os.path.relpath(dir_path, self.project_path)}</li>\n"
+            info_text += "</ul>\n"
+        
         # Auto-select language based on file counts
         if c_cpp_count >= max(java_count, python_count):
             self.language_combo.setCurrentText("C/C++")
@@ -339,7 +362,6 @@ class ProjectTab(QWidget):
         
         # Update status
         self.status_label.setText("Statistics updated based on selected directories")
-        
     
     def toggle_structure_section(self, checked):
         """Toggle visibility of the tree and buttons within the structure section."""
@@ -507,8 +529,13 @@ class ProjectTab(QWidget):
         self.progress_bar.setVisible(True)
         self.progress_bar.setRange(0, 0)  # Indeterminate progress
         
+        # Get selected directories if structure section is checked
+        selected_dirs = None
+        if self.structure_group.isChecked():
+            selected_dirs = self.get_selected_directories()
+        
         # Create worker thread
-        self.worker = ExtractionWorker(language, self.project_path, output_path)
+        self.worker = ExtractionWorker(language, self.project_path, output_path, selected_dirs)
         self.worker.finished.connect(self.on_extraction_finished)
         self.worker.error.connect(self.on_extraction_error)
         self.worker.start()

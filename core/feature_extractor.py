@@ -114,3 +114,34 @@ class FeatureExtractor(ABC):
             'assignmentsQty', 'mathOperationsQty', 'variablesQty',
             'maxNestedBlocks', 'uniqueWordsQty'
         ]
+        
+    def set_selected_directories(self, selected_dirs):
+        """Set selected directories to scan."""
+        self.selected_dirs = selected_dirs
+
+    def get_project_files(self):
+        """
+        Get all files in the project with relevant extensions.
+        
+        Returns:
+            list: List of file paths
+        """
+        all_files = []
+        
+        # Check if we have selected directories
+        if hasattr(self, 'selected_dirs') and self.selected_dirs:
+            # Only scan the selected directories
+            for dir_path in self.selected_dirs:
+                for root, _, files in os.walk(dir_path):
+                    for file in files:
+                        if any(file.endswith(ext) for ext in self.file_extensions):
+                            all_files.append(os.path.join(root, file))
+        else:
+            # Default behavior - scan the whole project
+            for root, _, files in os.walk(self.project_path):
+                for file in files:
+                    if any(file.endswith(ext) for ext in self.file_extensions):
+                        all_files.append(os.path.join(root, file))
+        
+        self.logger.info(f"Found {len(all_files)} files with extensions {', '.join(self.file_extensions)}")
+        return all_files

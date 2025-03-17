@@ -404,6 +404,8 @@ class MetricsTab(QWidget):
             return
         
         viz_type = self.viz_type_combo.currentText()
+        
+        # Clear the existing figure rather than creating a new one
         self.figure.clear()
         
         if viz_type == "Metric Distributions":
@@ -413,7 +415,9 @@ class MetricsTab(QWidget):
         elif viz_type == "Metrics by Defect Status":
             self.visualize_defect_metrics()
         
+        # Draw the canvas
         self.canvas.draw()
+        
     
     def visualize_distributions(self):
         """Visualize the distributions of metrics."""
@@ -428,11 +432,11 @@ class MetricsTab(QWidget):
         
         for i, col in enumerate(plot_cols):
             ax = self.figure.add_subplot(rows, 3, i+1)
-            self.metrics_df[col].hist(bins=20, ax=ax)
+            self.metrics_df[col].plot.hist(bins=20, ax=ax)
             ax.set_title(col)
         
         self.figure.suptitle("Metric Distributions", fontsize=16)
-        self.figure.tight_layout()
+        # self.figure.tight_layout()
     
     def visualize_correlation(self):
         """Visualize the correlation matrix of metrics."""
@@ -469,7 +473,7 @@ class MetricsTab(QWidget):
                            color="white" if abs(corr.iloc[i, j]) > 0.5 else "black")
         
         ax.set_title("Correlation Matrix of Metrics")
-        self.figure.tight_layout()
+        # self.figure.tight_layout()
     
     def visualize_defect_metrics(self):
         """Visualize metrics by defect status."""

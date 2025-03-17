@@ -142,6 +142,7 @@ class MainWindow(QMainWindow):
             self.output_path.setText(output_path)
         
         # Get the selected directories
+        selected_dirs = None
         if self.structure_group.isChecked():
             selected_dirs = self.get_selected_directories()
         else:
